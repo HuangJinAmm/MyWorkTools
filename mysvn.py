@@ -1,5 +1,12 @@
 import os
+import sys
 import re
+
+#文件路径分隔符
+if sys.platform=='win32':
+    FSep = r'\\'
+else:
+    FSep = r'\/'
 
 STATUS = {
     "no_change":' ',
@@ -30,54 +37,12 @@ def sh(*args):
 #   本地路径locaPath:"/path/to/your/project"
 class Svn(object):
 
-
     def __init__(self,localPath,url = '',usr='',pw=''):
         self.url = url
         self.localPath = localPath
         self.usr = usr
         self.pw = pw
-
-    #从默认url更新文件
-    #默认更新整个项目
-    #参数为子目录或文件的相对路径
-    def update(self,*args,filter = None):
-        cmd = "svn update"
-        if filter != None:
-            try:
-                args = filter(args)
-            except Exception as e:
-                print(e)
-        for o in self._psh(cmd,args):
-            print(o)
-
-    def revert(self,*args):
-        cmd = "svn revert"
-        for o in self._psh(cmd,args):
-            print(o)
-
-    def commit(self,*args,msg = "",filter = None):
-        cmd = "svn commit -m " + msg
-        if filter != None:
-            try:
-                args = filter(args)
-            except Exception as e:
-                print(e)
-        for o in self._psh(cmd,args):
-            print(o)
-
-    def _add(self,*args,filter = None):
-        cmd = "svn add"
-        if filter != None:
-            try:
-                args = filter(args)
-            except Exception as e:
-                print(e)
-        for o in self._psh(cmd,args):
-            print(o)
-
-    #查看状态
-    def status(self,*args,foldfilter=[],filefilter=[],full = False,update_msg=False):
-        rdict = {
+        self.rdict = {
             "A":list(),
             "C":list(),
             "D":list(),
@@ -86,6 +51,36 @@ class Svn(object):
             "?":list(),
             "!":list(),
         }
+
+    #从默认url更新文件
+    #默认更新整个项目
+    #参数为子目录或文件的相对路径
+    def update(self,*args):
+        cmd = "svn update"
+        for o in self._psh(cmd,args):
+            print(o)
+
+    def revert(self,*args):
+        cmd = "svn revert"
+        for o in self._psh(cmd,args):
+            print(o)
+
+    def commit(self,msg = ""):
+        args = self.rdict.get("M")
+        if len(args)>0:
+            cmd = "svn commit -m " + msg
+            for o in self._psh(cmd,args):
+                print(o)
+
+    def add(self):
+        cmd = "svn add"
+        args = self.rdict.get("?")
+        for out in self._psh(cmd,args):
+            print(out)
+
+    #查看状态
+    def status(self,*args,foldfilter=[],filefilter=[],full = False,update_msg=False):
+        print("*"*50+"查询状态"+"*"*50)
         cmd = "svn status"
         if full: cmd = cmd + " -v"
         if update_msg: cmd = cmd + " -u"
@@ -95,26 +90,17 @@ class Svn(object):
         else:
             d = "|".join(foldfilter)
             f = "|".join(filefilter)
-            res = "^[ACDIM?!].+\/({fold}).+\.({file})$".format(fold=d,file=f)
+            res = r"^[ACDIM?!].+?{f}({fold}).*?\.({file})$".format(f=FSep,fold=d,file=f)
             pat = re.compile(res)
             outfilter = pat.match
         for o in out:
+            print(o)
+            o= o.replace('\n','')
             if outfilter(o):
-                so = o.replace('\n','').split(' ')
-                rdict.get(so[0]).append(so[7])
-                print(o)
-        return rdict
+                splitO = o.split(' ')
+                self.rdict.get(splitO[0]).append(splitO[7])
 
     def status_linux(self,*args,foldfilter=[],filefilter=[],full = False,update_msg=False):
-        rdict = {
-            "A":list(),
-            "C":list(),
-            "D":list(),
-            "I":list(),
-            "M":list(),
-            "?":list(),
-            "!":list(),
-        }
         cmd = "svn status"
         if full: cmd = cmd + " -v"
         if update_msg: cmd = cmd + " -u"
@@ -123,13 +109,12 @@ class Svn(object):
         if len(foldfilter)==0 and len(filefilter) == 0 :
             grep=""
         else:
-            grep = "|grep -P '^[ACDIM?!].+\/({fold}).+\.({file})$'".format(fold = d,file = f)
+            grep = r"|grep -P '^[ACDIM?!].+\/({fold}).+\.({file})$'".format(fold = d,file = f)
         out = self._psh(cmd,args,append= grep)
         for o in out:
             so = o.replace('\n','').split(' ')
-            rdict.get(so[0]).append(so[7])
+            self.rdict.get(so[0]).append(so[7])
             print(o)
-        return rdict
     #查看日志
     def log(self,*args):
         cmd = "svn log"
@@ -137,13 +122,22 @@ class Svn(object):
             print(o)
 
     def info(self,*args):
+        print("*"*100)
         cmd = "svn info"
         for o in self._psh(cmd,args):
             print(o)
     #检出
     def checkout(self):
-        for i in sh("svn","co",self.url,self.localPath,"--username "+self.usr,"--password "+self.pw):
-            print(i)
+        print("*"*50+"检出"+"*"*50)
+        if not self.usr:
+            self.pw = input("username")
+        if not self.pw:
+            self.pw = input("password")
+        if bool(self.url) and bool(self.localPath):
+            for i in sh("svn","co",self.url,self.localPath,"--username "+self.usr,"--password "+self.pw):
+                print(i)
+        else:
+            print("no url or localpath")
 
     #批量执行sh并打印
     def _psh(self,cmd,args,append=""):
@@ -157,17 +151,24 @@ class Svn(object):
                 yield out
 
 def test():
-    root ="/media/hj/_dde_data/javaProject/plat-dev" 
-    URL = "svn://121.199.65.29:8888/4pl/rd/code/dev/web/plateform"
-    fold = ["sv/src","web/src","web/html","common/src"]
-    
-    rootsvn = Svn(root)
-    # rootsvn.status_linux(filefilter=["java","js"],foldfilter=["sv","web","common"])
-    r = rootsvn.status()
-    print(r)
-    # rootsvn.info()
-    # rootsvn.update()
-    # rootsvn.checkout()
+    ########
+    root_dev = r"C:\Users\huangjin\Desktop\java_project\plat_dev"
+    root_rm = r"C:\Users\huangjin\Desktop\java_project\plat_rm"
+    root_rls = r"C:\Users\huangjin\Desktop\java_project\plat_rls"
+    ld_dev = r"C:\Users\huangjin\Desktop\java_project\ld_dev"
+    # URL = r"svn://121.199.65.29:8888/4pl/rd/code/dev/web/plateform"
+    ########
+    devSvn = Svn(root_dev)
+    rmSvn = Svn(root_rm)
+    rlsSvn = Svn(root_rls)
+    ldDev = Svn(ld_dev)
+    tskList = [devSvn,rmSvn,rlsSvn,ldDev]
+    ########
+    for tsk in tskList:
+        tsk.info()
+        tsk.update()
+        tsk.status()
+        # tsk.status(filefilter=["java","js","html","xml"],foldfilter=["src","html"])
 
 if __name__ == "__main__":
     test()
