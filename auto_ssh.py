@@ -2,24 +2,47 @@ import paramiko
 
 class AutoSsh:
 
-    def __init__(self,hostname,username,password):
-        self._ssh = self.connect(hostname,username,password)
+    def __init__(self, host, username,pwd,port=22):
+        self.host = host
+        self.port = port
+        self.username = username
+        self.pwd = pwd
+        self.__k = None
+        self._ssh = None
+        self.connect()
 
-    def connect(self,hostname,username,password):
-        # 创建SSH对象
-        ssh = paramiko.SSHClient()
-        # 允许连接不在know_hosts文件中的主机
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        # 连接服务器
-        ssh.connect(hostname=hostname, port=22, username=username , password= password)
-        return ssh
-
-    def exec_command(self,cmd):
-        # 执行命令
-        stdin, stdout, stderr = self._ssh.exec_command('ls')
-        # 获取命令结果
-        return stdout.read()
+    def connect(self):
+        transport = paramiko.Transport((self.host, self.port))
+        transport.connect(username=self.username, password=self.pwd)
+        self.__transport = transport
 
     def close(self):
-        # 关闭连接
-        self._ssh.close()
+        self.__transport.close()
+
+    def upload(self,local_path,target_path):
+        sftp = paramiko.SFTPClient.from_transport(self.__transport)
+        sftp.put(local_path,target_path)
+
+    def cmd(self, command):
+        if(not bool(self._ssh)):
+            self._ssh = paramiko.SSHClient()
+        self._ssh._transport = self.__transport
+        # 执行命令
+        stdin, stdout, stderr =self._ssh.exec_command(command)
+        # 获取命令结果
+        result = stdout.read()
+        print(result.decode("utf-8"))
+        return result
+
+def test():
+    host = "120.78.86.71"
+    username ="query"
+    password = "query123"
+    asvn = AutoSsh(host,username,password)
+    asvn.cmd("ls")
+    asvn.cmd("cd logs")
+    asvn.cmd("ls -al")
+    asvn.close()
+
+if __name__ == "__main__":
+    test()
