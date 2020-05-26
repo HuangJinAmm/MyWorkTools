@@ -150,25 +150,60 @@ class Svn(object):
             for out in sh(cmd,p,append):
                 yield out
 
+class Maven:
+
+    def __init__(self):
+        self.path = r"D:\work-project\upload-jar"
+        self.up_url = r"http://192.168.0.250:8081/repository/maven-releases/"
+        self.dId = "maven-releases"
+        self._cmd = r"mvn deploy:deploy-file "
+        self.id_rule = "[\w-]+(?=-\d)"
+        self.version_rule = "(?<=-)[\d\.]+"
+
+    def parse(self,path,dr,file):
+        file_name,file_ext = os.path.splitext(file)
+        id_result = re.findall(self.id_rule,file_name)
+        version_result = re.findall(self.version_rule,file_name)
+        cmd_map = dict()
+        cmd_map["gid"] = dr
+        cmd_map["id"] = id_result[0]
+        cmd_map["version"] = version_result[0]
+        cmd_map["ext"] = file_ext[1::]
+        cmd_map["file_path"] = os.path.join(path,file)
+        cmd_map["url"] = self.up_url
+        cmd_map["did"] = self.dId
+        self._cmd = self._cmd + "-DgroupId={gid} -DartifactId={id} -Dversion={version} -Dpackaging={ext} -Dfile={file_path} -Durl={url} -DrepositoryId={did}".format_map(cmd_map)
+
+    def upload(self):
+        # sh(self._cmd)
+        print(self._cmd)
+
+    def scan(self):
+        for root,dir_names,files in os.walk(self.path):
+            for dr in dir_names:
+                sub_path = os.path.join(root,dr)
+                for file in os.listdir(sub_path):
+                    self.parse(sub_path,dr,file)
+                    self.upload()
+
 def test():
-    ########
-    root_dev = r"C:\Users\huangjin\Desktop\java_project\plat_dev"
-    root_rm = r"C:\Users\huangjin\Desktop\java_project\plat_rm"
-    root_rls = r"C:\Users\huangjin\Desktop\java_project\plat_rls"
-    ld_dev = r"C:\Users\huangjin\Desktop\java_project\ld_dev"
-    # URL = r"svn://121.199.65.29:8888/4pl/rd/code/dev/web/plateform"
-    ########
-    devSvn = Svn(root_dev)
-    rmSvn = Svn(root_rm)
-    rlsSvn = Svn(root_rls)
-    ldDev = Svn(ld_dev)
-    tskList = [devSvn,rmSvn,rlsSvn,ldDev]
-    ########
-    for tsk in tskList:
-        tsk.info()
-        tsk.update()
-        tsk.status()
-        # tsk.status(filefilter=["java","js","html","xml"],foldfilter=["src","html"])
+    mvn = Maven()
+    mvn.scan()
+    # ########
+    # root_dev = r"D:\work-project\plat\dev"
+    # root_rm = r"D:\work-project\ld\dev"
+
+    # ########
+    # devSvn = Svn(root_dev)
+    # rmSvn = Svn(root_rm)
+
+    # tskList = [devSvn,rmSvn]
+    # ########
+    # for tsk in tskList:
+    #     tsk.info()
+    #     # tsk.update()
+    #     tsk.status()
+    #     # tsk.status(filefilter=["java","js","html","xml"],foldfilter=["src","html"])
 
 if __name__ == "__main__":
     test()
