@@ -1,0 +1,12 @@
+web:
+    test:
+        cookie: 'userName="%E6%8F%A1%E9%9B%B6%E6%8B%85%E8%B6%85%E7%BA%A7%E7%AE%A1%E7%90%86%E5%91%98"; orgName="%E6%8F%A1%E9%9B%B6%E6%8B%85%E4%B8%93%E7%BA%BF"; orgId=1; userId=1; userType=null; orgType=null; tenantId=2; tenantName="%E6%8F%A1%E9%9B%B6%E6%8B%85%E4%B8%93%E7%BA%BF"; isTopOrg=1; tenantBrowserTitle="%E6%8F%A1%E9%9B%B6%E6%8B%85%E4%B8%93%E7%BA%BF"; roleTypes=8; carrierId=null; token=EgvWty8iEq8fdoZhOiOsrd1oXokUgNbt; days=406; JSESSIONID=srv230021b32qhhiot6611bozpfv5qjucj.srv23002'
+        url: http://192.168.0.250:8088/fplzx/organize/
+        rule: wo56
+        task:
+            - path: organizeBO.ajax?cmd=queryRoleToEntity
+              method: post
+              datafrom: faker
+              data:
+                username: faker.name
+                address: address
