@@ -18,6 +18,7 @@ FROM INFORMATION_SCHEMA.COLUMNS where table_name  = 'tc_company_info'"
     # tabel_sql = "select table_name from information_schema.tables where table_schema='plat'"
     ret = do_query(mysql_conn,sql)
     # retable = do_query(mysql_conn,tabel_sql)
+    slasdf asdfad asdfad
 
 def do_query(conn,sql):
     try:
@@ -25,7 +26,9 @@ def do_query(conn,sql):
             cursor.execute(sql)
             select_result = cursor.fetchall()
             for result_one in select_result:
-                print(result_one)
+                for r in result_one:
+                    if isinstance(r,str):
+                        print(r.encode("GBK"))
     except Exception as e:
         print(e)
 
