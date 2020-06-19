@@ -18,7 +18,6 @@ FROM INFORMATION_SCHEMA.COLUMNS where table_name  = 'tc_company_info'"
     # tabel_sql = "select table_name from information_schema.tables where table_schema='plat'"
     ret = do_query(mysql_conn,sql)
     # retable = do_query(mysql_conn,tabel_sql)
-    slasdf asdfad asdfad
 
 def do_query(conn,sql):
     try:
